@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+out/
+private/
+.cache/
+bin/
+.env
+.env.*
+credentials/
+*.enc
+*cookies*
+evidence/
+evidence-*.html
+IMPLEMENTATION_STATUS.md
+PLAN.md
+.hermes/
