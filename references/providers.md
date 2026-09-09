@@ -1,6 +1,14 @@
 # Provider boundaries
 
-## Exa
+## Codex Exa plugin route
+
+In Codex, prefer a callable Exa web-search tool for one already identified person when no professional email is sourced. Detect the tool by its capability and description; current names may include `mcp__codex_apps__exa_web_search_exa` and the optional `mcp__codex_apps__exa_web_fetch_exa`, but aliases are valid. The host agent must call the tool directly; do not try to invoke an MCP tool through Python or a shell.
+
+Use an email-only prompt that asks for at most one attributable professional address, source URLs and null when uncertain. Do not use the plugin for identity resolution, LinkedIn/X profile discovery or activity research. If a returned source needs inspection, fetch only that source for email attribution and retain the actual retrieval timestamp. Normalize the result into the [plugin handoff](exa-plugin-result.md) and run the offline `import-exa` command.
+
+The plugin path needs no `EXA_API_KEY`. The MCP tool may have its own account, rate and cost behavior; report returned cost data when available and otherwise record cost as unknown. Do not claim the direct Agent API's `$0.045–$0.05` allowance, POST journal or duplicate-dispatch protection for a plugin call. Keep the handoff private and preserve the raw or redacted returned evidence. The importer marks an address `provider_reported`; only an inspected source may support `source_supported`, and mailbox status remains `not_checked` until AfterShip runs.
+
+## Direct Exa Agent API fallback
 
 Implementation: `scripts/cb_providers.py:exa_run` and `exa_http`. Reviewed API material is retained under `evidence/exa-{overview,create,get}.md`; consult https://docs.exa.ai before authorizing real spend because provider prices/contracts can change.
 
@@ -14,7 +22,7 @@ Host-managed environment: `EXA_API_KEY`; never embed or print it. `live_test.py 
 
 Transport: one `POST https://api.exa.ai/agent/runs`, then bounded `GET /agent/runs/{id}` polling (default 12, five-second intervals; 30-second HTTP timeout). Request asks for one professional identity/email with sources, ambiguity and stale-employer notes. There is no automatic POST retry. A persistent exclusive journal records uncertain dispatch before POST. Resume with identical authorization and the SAME journal. Do not delete uncertain journals: reconcile with the provider/operator. Poll exhaustion does not cancel a provider run or prove no further charges. Review pending jobs manually. No cancellation helper is included.
 
-Keep raw run output/grounding in private evidence. Inspect source claims before manually mapping them into compiler identity/email sections. No automatic provider-output compiler adapter exists. Provider-reported attribution, independently inspected source support, and SMTP acceptance are different claims.
+Keep raw run output/grounding in private evidence. Inspect source claims before manually mapping them into compiler identity/email sections. The direct API result is not automatically converted into a brief; provider-reported attribution, independently inspected source support, and SMTP acceptance are different claims.
 
 Tests inject a fake transport and fixture key; they verify local request/journal logic only. A separate read-only credential probe returned HTTP 200 from `GET /agent/runs?limit=1`; see `evidence/exa-access-check.json`. This proves authenticated Agent API access, NOT successful contact enrichment, sufficient paid credits, mailbox verification or a completed research run. No research POST or cost has been verified.
 
@@ -26,7 +34,7 @@ Use the Agent API for one known person; Websets is better suited to persistent l
 
 Execution belongs to the agent using existing host browser tools, not these scripts. Discover the correct existing session through host metadata; do not recreate, overwrite or steal unrelated sessions. Reported LinkedIn login and previously reported X identity are not current session checks. Stop on login/challenge/access denial. Never expose cookies or bypass access controls.
 
-For EACH platform: execute person search, inspect a matched profile, search accessible authored activity, inspect activity. Use LinkedIn's native search and profile activity surface; on X use person/handle search and `from:confirmed_handle`. Record exact queries, actual URLs and timestamps, outcome, plus redacted saved artifacts. Native-domain URLs in supplied JSON are only structural checks, not proof these actions occurred. Exa search is fallback discovery, never native-search acceptance.
+For EACH platform: execute person search, inspect a matched profile, search accessible authored activity, inspect activity. Use LinkedIn's native search and profile activity surface; on X use person/handle search and `from:confirmed_handle`. Record exact queries, actual URLs and timestamps, outcome, plus redacted saved artifacts. Native-domain URLs in supplied JSON are only structural checks, not proof these actions occurred. The Codex Exa route is email enrichment only and never native-search acceptance.
 
 Coverage enums distinguish `complete`, `partial`, `blocked`, `not_attempted`, `no_results`, `inactive`. Publication dates may be null. Relevant signals must be authored by the resolved professional, not comments about them or arbitrary search snippets.
 
@@ -46,4 +54,4 @@ Local verification exercised the actual library with invalid syntax (no DNS) and
 
 ## Evidence audit
 
-`live_test.py verify` checks supplied records and existence/containment of nonempty evidence paths, subject consistency of a supplied Exa journal, grounding presence, and draft presence. It does not inspect screenshots, attest log authenticity or execute a browser/verifier. `evidence_complete` concerns only recorded completeness; `passed` remains false and `live_execution` is `not_verified` by design. Full live acceptance needs a separately reviewed real action transcript on both platforms plus authorized provider execution. No such transcript exists in this checkout.
+`live_test.py verify` checks supplied records and existence/containment of nonempty evidence paths, subject consistency of a supplied direct-API Exa journal, grounding presence, and draft presence. It does not inspect screenshots, attest log authenticity or execute a browser/verifier. A Codex Exa plugin handoff is validated at import time but does not by itself attest live tool execution. `evidence_complete` concerns only recorded completeness; `passed` remains false and `live_execution` is `not_verified` by design. Full live acceptance needs a separately reviewed real action transcript on both platforms plus a retained, reviewed plugin handoff or authorized direct API execution. No such transcript exists in this checkout.
