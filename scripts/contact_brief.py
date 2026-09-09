@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import jsonschema
 
 ROOT = Path(__file__).resolve().parents[1]
+EXA_PLUGIN_SCHEMA = ROOT / 'references/exa-plugin-result.schema.json'
 
 
 def validate(brief):
@@ -31,6 +32,66 @@ def validate(brief):
         raise ValueError('SMTP result cannot be inferred from DNS')
     if brief['acceptance'] != acceptance(brief):
         raise ValueError('Recorded-evidence acceptance must match computed gate')
+
+
+def import_exa_plugin(request, provider_result):
+    """Merge a host-normalized Codex Exa result into a build request.
+
+    The host agent calls the MCP tool; this function stays offline and only
+    validates the handoff. Provider-reported email attribution is deliberately
+    kept separate from inspected source support and mailbox verification.
+    """
+    if not isinstance(request, dict) or not str(request.get('name', '')).strip() \
+            or not str(request.get('company', '')).strip():
+        raise ValueError('Import requires a request with name and company')
+    schema = json.loads(EXA_PLUGIN_SCHEMA.read_text())
+    jsonschema.Draft202012Validator(
+        schema, format_checker=jsonschema.FormatChecker()).validate(provider_result)
+    expected_subject = {
+        'name': request['name'],
+        'company': request['company'],
+    }
+    if provider_result['subject'] != expected_subject:
+        raise ValueError('Exa plugin subject does not match the build request')
+    if provider_result['status'] == 'completed' and provider_result['email'] is None:
+        raise ValueError('Completed Exa plugin result must contain one sourced email')
+    if provider_result['status'] != 'completed' and provider_result['email'] is not None:
+        raise ValueError('Only completed Exa plugin results may contain an email')
+    if provider_result['email'] is not None:
+        address = provider_result['email']['address']
+        if (address.count('@') != 1 or any(char.isspace() for char in address)
+                or any(separator in address for separator in ',;')):
+            raise ValueError('Exa plugin email must contain one bare address')
+    existing_email = request.get('email')
+    if isinstance(existing_email, dict) and existing_email.get('address'):
+        raise ValueError('Request already contains an email; skip plugin import')
+    if provider_result['email'] is None:
+        email = {
+            'address': None,
+            'attribution': 'unknown',
+            'evidence': [],
+            'mailbox': {
+                'status': 'not_checked',
+                'method': 'none',
+                'checked_at': None,
+                'detail': 'No mailbox check performed; identity and deliverability are separate.',
+            },
+        }
+    else:
+        email = {
+            'address': provider_result['email']['address'],
+            'attribution': 'provider_reported',
+            'evidence': deepcopy(provider_result['email']['sources']),
+            'mailbox': {
+                'status': 'not_checked',
+                'method': 'none',
+                'checked_at': None,
+                'detail': 'Email discovery does not verify a mailbox; run the separately authorized AfterShip check.',
+            },
+        }
+    result = deepcopy(request)
+    result['email'] = email
+    return result
 
 
 
@@ -112,9 +173,10 @@ def render(brief):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['build', 'validate', 'verify-email'])
+    parser.add_argument('command', choices=['build', 'validate', 'verify-email', 'import-exa'])
     parser.add_argument('input', type=Path)
     parser.add_argument('--out', type=Path)
+    parser.add_argument('--result', type=Path, help='Normalized Codex Exa plugin result for import-exa')
     parser.add_argument('--now', help='Explicit compilation timestamp for reproducible offline fixtures')
     parser.add_argument('--execute', action='store_true', help='Explicitly dispatch the approved email check')
     parser.add_argument('--smtp', action='store_true', help='Enable separately approved SMTP and catch-all checks')
@@ -123,6 +185,17 @@ def main():
     args = parser.parse_args()
     try:
         data = json.loads(args.input.read_text())
+        if args.command == 'import-exa':
+            if not args.result:
+                parser.error('import-exa requires --result')
+            if not args.out:
+                parser.error('import-exa requires --out JSON path')
+            imported = import_exa_plugin(data, json.loads(args.result.read_text()))
+            encoded = json.dumps(imported, indent=2) + '\n'
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            args.out.write_text(encoded)
+            print(f'Wrote {args.out}')
+            return 0
         if args.command == 'verify-email':
             if not args.execute:
                 parser.error('verify-email requires --execute and address-scoped authorization JSON')
