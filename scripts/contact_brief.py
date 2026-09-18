@@ -10,6 +10,7 @@ import jsonschema
 
 ROOT = Path(__file__).resolve().parents[1]
 EXA_PLUGIN_SCHEMA = ROOT / 'references/exa-plugin-result.schema.json'
+FIBER_SCHEMA = ROOT / 'references/fiber-agent-result.schema.json'
 
 
 def validate(brief):
@@ -23,6 +24,13 @@ def validate(brief):
         raise ValueError('Email attribution requires an address')
     if email['attribution'] == 'source_supported' and not email['evidence']:
         raise ValueError('Source-supported email requires source evidence')
+    lookup = email.get('lookup')
+    if lookup:
+        if lookup['status'] == 'provider_reported':
+            if not email['address'] or email['attribution'] != 'provider_reported':
+                raise ValueError('Provider-reported lookup requires a provider-reported address')
+        elif lookup['status'] not in ('not_attempted',) and (email['address'] or email['attribution'] != 'unknown'):
+            raise ValueError('Uncertain or failed lookup cannot expose a public email address')
     if mailbox['status'] == 'not_checked':
         if mailbox['method'] != 'none' or mailbox['checked_at'] is not None:
             raise ValueError('Unchecked mailbox cannot claim a check method or time')
@@ -94,6 +102,78 @@ def import_exa_plugin(request, provider_result):
     return result
 
 
+def import_fiber(request, provider_result):
+    """Merge a host-normalized Exa Agent/Fiber result into a build request.
+
+    Fiber output is provider attribution, not inspected source support or mailbox
+    verification. A non-provider result never exposes a provider candidate address
+    in the public brief; retain the raw envelope privately for audit instead.
+    """
+    if not isinstance(request, dict) or not str(request.get('name', '')).strip() \
+            or not str(request.get('company', '')).strip():
+        raise ValueError('Import requires a request with name and company')
+    schema = json.loads(FIBER_SCHEMA.read_text())
+    jsonschema.Draft202012Validator(
+        schema, format_checker=jsonschema.FormatChecker()).validate(provider_result)
+    expected_subject = {
+        'name': request['name'],
+        'company': request['company'],
+    }
+    if provider_result['subject'] != expected_subject:
+        raise ValueError('Fiber subject does not match the build request')
+    existing_email = request.get('email')
+    if isinstance(existing_email, dict) and existing_email.get('address'):
+        raise ValueError('Request already contains an email; skip Fiber import')
+    status = provider_result['status']
+    address = None
+    attribution = 'unknown'
+    evidence = []
+    if status == 'provider_reported':
+        if provider_result['email'] is None:
+            raise ValueError('Provider-reported Fiber result must contain one email')
+        address = provider_result['email']['address']
+        if (address.count('@') != 1 or any(char.isspace() for char in address)
+                or any(separator in address for separator in ',;')):
+            raise ValueError('Fiber email must contain one bare address')
+        attribution = 'provider_reported'
+        evidence = []
+    elif status == 'uncertain' and provider_result['email'] is not None:
+        # A provider candidate may be useful in the private raw journal, but it
+        # is not attributable enough to expose in the public contact brief.
+        pass
+    elif provider_result['email'] is not None:
+        raise ValueError('Only provider-reported Fiber results may contain a public email')
+    lookup = {
+        'provider': 'exa_agent_fiber',
+        'status': status,
+        'provider_run_id': provider_result['run_id'],
+        'retrieved_at': provider_result['retrieved_at'],
+        'cost_usd': provider_result['cost_usd'],
+        'attribution': provider_result['attribution'],
+        'source_urls': provider_result['source_urls'],
+        'usage': provider_result.get('usage'),
+        'cost': provider_result.get('cost'),
+        'detail': 'Fiber provider output; source support and mailbox verification are separate.'
+        if status == 'provider_reported'
+        else 'Fiber did not return a confidently attributable professional email.',
+    }
+    email = {
+        'address': address,
+        'attribution': attribution,
+        'evidence': evidence,
+        'lookup': lookup,
+        'mailbox': {
+            'status': 'not_checked',
+            'method': 'none',
+            'checked_at': None,
+            'detail': 'Email discovery does not verify a mailbox; run the separately authorized AfterShip check.',
+        },
+    }
+    result = deepcopy(request)
+    result['email'] = email
+    return result
+
+
 
 def build(request, now=None):
     now = now or datetime.now(timezone.utc).isoformat()
@@ -102,6 +182,10 @@ def build(request, now=None):
         'subject': {'name': request['name'], 'company': request['company']},
         'identity': {'status': 'unresolved', 'confidence': 'unknown', 'evidence': [], 'conflicts': []},
         'email': {'address': None, 'attribution': 'unknown', 'evidence': [],
+                  'lookup': {'provider': 'none', 'status': 'not_attempted', 'provider_run_id': None,
+                  'retrieved_at': None, 'cost_usd': None, 'attribution': None,
+                             'source_urls': [], 'usage': None, 'cost': None,
+                             'detail': 'No provider email lookup performed.'},
                   'mailbox': {'status': 'not_checked', 'method': 'none', 'checked_at': None,
                               'detail': 'No mailbox check performed; identity and deliverability are separate.'}},
         'coverage': {p: {'status': 'not_attempted', 'reason': 'No native evidence supplied',
@@ -161,6 +245,9 @@ def render(brief):
     lines += ['\n## Identity evidence']
     lines += [f"- {s['quote']} — {s['url']} (fetched {s['fetched_at']})" for s in brief['identity']['evidence']]
     lines += ['\n## Email attribution', f"{brief['email']['attribution']}; mailbox method: {brief['email']['mailbox']['method']}; checked: {brief['email']['mailbox']['checked_at'] or 'never'}", brief['email']['mailbox']['detail']]
+    if brief['email'].get('lookup'):
+        lookup = brief['email']['lookup']
+        lines.append(f"Provider lookup: {lookup['provider']} / {lookup['status']} / run {lookup['provider_run_id'] or 'none'} / retrieved {lookup['retrieved_at'] or 'never'} / cost {lookup['cost_usd'] if lookup['cost_usd'] is not None else 'unknown'}")
     lines += [f"- {s['quote']} — {s['url']}" for s in brief['email']['evidence']]
     lines += ['\n## Relevant activity']
     lines += [f"- {s['summary']} — {s['url']} ({s['published_at'] or 'publication unknown'}; fetched {s['fetched_at']}). Why relevant: {s['relevance']}" for s in brief['signals']]
@@ -173,7 +260,7 @@ def render(brief):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['build', 'validate', 'verify-email', 'import-exa'])
+    parser.add_argument('command', choices=['build', 'validate', 'verify-email', 'import-exa', 'import-fiber'])
     parser.add_argument('input', type=Path)
     parser.add_argument('--out', type=Path)
     parser.add_argument('--result', type=Path, help='Normalized Codex Exa plugin result for import-exa')
@@ -191,6 +278,17 @@ def main():
             if not args.out:
                 parser.error('import-exa requires --out JSON path')
             imported = import_exa_plugin(data, json.loads(args.result.read_text()))
+            encoded = json.dumps(imported, indent=2) + '\n'
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            args.out.write_text(encoded)
+            print(f'Wrote {args.out}')
+            return 0
+        if args.command == 'import-fiber':
+            if not args.result:
+                parser.error('import-fiber requires --result')
+            if not args.out:
+                parser.error('import-fiber requires --out JSON path')
+            imported = import_fiber(data, json.loads(args.result.read_text()))
             encoded = json.dumps(imported, indent=2) + '\n'
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(encoded)
