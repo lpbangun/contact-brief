@@ -55,3 +55,15 @@ python3 scripts/contact_brief.py validate out/contact.json
 ```
 
 The request and envelope names/company must match exactly. The importer accepts zero or one address and refuses invalid or multiple-address data, missing source records, overwriting an existing address, and status/email contradictions. Its output leaves the mailbox `not_checked`; use the separately authorized AfterShip flow if verification is required.
+
+## Fiber Agent handoff
+
+The Exa Agent route using `data_sources: [{"provider":"fiber"}]` has a separate normalized envelope and importer. Use [fiber-agent-result.schema.json](fiber-agent-result.schema.json) and preserve the returned `usage` and `cost` objects (including provider-specific breakdowns) alongside any scalar total:
+
+```sh
+python3 scripts/contact_brief.py import-fiber request.json \
+  --result private/fiber-agent-result.json \
+  --out private/request-with-email.json
+```
+
+Unlike the Codex Exa plugin schema, a Fiber `provider_reported` result may have an empty `source_urls` array because the provider can return an attribution without a directly exposed URL. That result remains `provider_reported`, never `source_supported`, and the mailbox remains `not_checked`. An `uncertain` candidate address stays private in the raw provider record and is not emitted in the public brief. Non-success statuses must expose a null public address. The host-owned batch runner, if any, is responsible for one-result-per-person correlation, bounded concurrency/spend, resumable journaling and preserving raw runs; this package only imports and validates one normalized result at a time.

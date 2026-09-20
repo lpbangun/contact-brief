@@ -1,6 +1,8 @@
 # Contact Brief
 
-Portable, standalone evidence compiler and agent workflow for one professional contact. Produces cited Markdown, `contact-brief.v1` JSON and an optional unsent draft. In Codex, email discovery can route through the host's Exa plugin without a user-managed API key. **Offline implementation is usable; full live acceptance is NOT RUN.**
+Portable, standalone evidence compiler and agent workflow for one professional contact. Produces cited Markdown, `contact-brief.v1` JSON and an optional unsent draft. In Codex, email discovery can route through a host-owned Exa plugin or Fiber Agent handoff without a user-managed API key. **Offline implementation is usable; full live acceptance is NOT RUN.**
+
+This remains a **single-person compiler**. A fixed list or multi-person Fiber run belongs in a separate host bridge: the host owns scheduling, bounded concurrency/spend, resumable journaling and raw provider records, then imports one normalized result per person. This package does not discover people, call Fiber, or send outreach.
 
 ## Install locally
 
@@ -28,6 +30,20 @@ python3 scripts/contact_brief.py validate out/contact.json
 ```
 
 The importer checks the exact name/company, permits zero or one address, requires source records for a non-null address, marks it `provider_reported`, and leaves the mailbox `not_checked`. Keep the original handoff as the provider record. It does not assert a plugin cost cap, duplicate-prevention journal or mailbox verification.
+
+## Fiber Agent handoff
+
+For the Exa Agent route with `data_sources: [{"provider":"fiber"}]`, the host must first normalize one result against [references/fiber-agent-result.schema.json](references/fiber-agent-result.schema.json). Preserve the exact subject, Fiber status, run ID, retrieval time, actual `usage` and `cost` objects when returned (including provider-specific fields such as `costDollars.dataSources`), the scalar total when available, attribution, and source URLs (which may legitimately be empty):
+
+```sh
+python3 scripts/contact_brief.py import-fiber request.json \
+  --result private/fiber-agent-result.json \
+  --out private/request-with-email.json
+python3 scripts/contact_brief.py build private/request-with-email.json --out out/contact
+python3 scripts/contact_brief.py validate out/contact.json
+```
+
+`provider_reported` may expose one provider-reported professional address even when Fiber supplied no URL; it is still not `source_supported` and the mailbox remains `not_checked`. `uncertain` may retain a candidate address only in the private raw envelope; the public brief exposes no address. `not_found`, `not_lookupable`, `identity_mismatch`, provider errors, rate limits and cancellations expose no address. The importer never guesses, accepts personal/phone data, overwrites an existing address, or performs a mailbox check.
 
 ## Deterministic offline demo
 
@@ -60,7 +76,7 @@ Use this only when no callable Codex Exa plugin is available, after preparing a 
 python3 scripts/live_test.py exa --authorization private/authorization.json --journal private/exa-run.json --execute
 ```
 
-The direct Agent API subcommand finds ONE professional email only, using fixed low effort (documented estimate $0.045 with one email; $0.05 request allowance, not a provider hard cap). It does not research profiles/posts or verify mailboxes. No automatic higher-effort retry; reuse the same journal to prevent duplicate dispatch. Skip Exa when an address is already sourced. It is not the end-to-end workflow, and its budget/journal rules do not apply to the Codex plugin route. No example authorization grants permission. See [providers](references/providers.md) for input shape, guardrails and limitations.
+The bundled direct Agent API subcommand is a legacy, single-person fallback with its own low-effort allowance and journal rules. Those local estimates are not universal Fiber pricing or a provider-enforced cap. It does not research profiles/posts or verify mailboxes. No automatic higher-effort retry; reuse the same journal to prevent duplicate dispatch. Skip Exa when an address is already sourced. It is not the end-to-end workflow, and its budget/journal rules do not apply to a host-owned Fiber bridge. No example authorization grants permission. See [providers](references/providers.md) for input shape, guardrails and limitations.
 
 ## Optional real AfterShip adapter
 
@@ -88,6 +104,6 @@ Without `--smtp`, this is syntax/DNS checking, NOT mailbox verification. Even SM
 - `scripts/contact_brief.py`: offline compiler, renderer and semantic validation.
 - `scripts/cb_providers.py`: opt-in journaled Exa transport; optional AfterShip subprocess execution and conservative normalization.
 - `scripts/live_test.py`: no-call preflight, opt-in Exa execution and supplied-evidence audit.
-- [Schemas](references/contact-brief.schema.json), [Exa plugin handoff](references/exa-plugin-result.md), [Jobsss handoff](references/jobsss.md), [verification](VERIFICATION.md).
+- [Schemas](references/contact-brief.schema.json), [Exa plugin handoff](references/exa-plugin-result.md), [Fiber Agent handoff](references/fiber-agent-result.schema.json), [Jobsss handoff](references/jobsss.md), [verification](VERIFICATION.md).
 
 Not implemented: autonomous browser orchestration, direct MCP invocation from Python, automatic conversion of raw tool output without a host-normalized handoff, or Jobsss import. These remain agent/manual boundaries. The real optional AfterShip library was exercised on invalid syntax with no DNS, and DNS/SMTP outcomes were tested with mocks. No paid calls, external mailbox probes, native session tests, real contact mutation, sending, cron or profile installation were performed. Jobsss integration is documentation against inspected MCP source, not an exercised integration.
