@@ -13,7 +13,28 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 ```
 
-Use `.venv/bin/python` in place of `python3` below if needed. Windows: `.venv\Scripts\python.exe`. Nothing installs into Hermes profiles or Jobsss.
+Use `.venv/bin/python` in place of `python3` below if needed. Windows: `.venv\Scripts\python.exe`. The compiler installs nothing into Hermes profiles or Jobsss; the optional Agent Plugin package below installs only through the host's own plugin command.
+
+## Hermes Agent Plugin package
+
+The repository root is a portable **Agent Plugins v1** package, so a Hermes host can install and discover it without any Hermes-specific code path:
+
+- `plugin.json` — the Agent Plugins v1 manifest (`name`, `version`, `description`, `license`, `keywords`). No other top-level field is declared, because the portable reader ignores unknown fields.
+- `skills/contact-brief/SKILL.md` — the installable skill surface. Its body is byte-identical to [SKILL.md](SKILL.md); only the frontmatter differs, flattened into the string-only `metadata` map Agent Plugins v1 requires. An offline test enforces that equality, so the installed skill cannot drift from the canonical procedure.
+- `routes.json` — machine-readable provider-route metadata (`contact-brief-routes/v1`). It declares the four routes `codex_exa_plugin`, `exa_agent_fiber`, `direct_exa_agent_api` and `aftership_mailbox_check`, plus fixed inputs, single-subject limits, approval requirements, spend/attempt visibility, miss statuses, redaction rules and the capabilities this package never has.
+- No `mcp.json`: this package exposes no MCP server. Compilation is performed by the bundled CLI through the host terminal, consistent with the boundary below. Route and evidence metadata is what a host adapter reads.
+
+```sh
+# install (installs disabled; enable explicitly)
+hermes plugins install <git-url-or-owner/repo>
+hermes plugins enable contact-brief
+
+# validate and exercise the real runtime contracts in an isolated HERMES_HOME
+hermes plugins validate . --json
+hermes plugins doctor . --ci
+```
+
+State stays under the host-provided `${PLUGIN_DATA}`; the plugin directory itself is never written. The skill is resolvable in a new session as `contact-brief:contact-brief` through the host's skill surface. The offline packaging checks are `python3 -m unittest tests.test_plugin_package` (manifest, skill surface, route metadata, boundaries) and `python3 -m unittest tests.test_plugin_smoke` (real `hermes plugins validate`/`doctor` in a throwaway HOME; it skips, with that reason, when the CLI is absent). Installing the package grants no discovery, browser, social, messaging or sending capability: those routes do not exist here.
 
 ## Codex Exa plugin route
 
@@ -104,6 +125,8 @@ Without `--smtp`, this is syntax/DNS checking, NOT mailbox verification. Even SM
 - `scripts/contact_brief.py`: offline compiler, renderer and semantic validation.
 - `scripts/cb_providers.py`: opt-in journaled Exa transport; optional AfterShip subprocess execution and conservative normalization.
 - `scripts/live_test.py`: no-call preflight, opt-in Exa execution and supplied-evidence audit.
+- `plugin.json` + `skills/contact-brief/SKILL.md`: portable Agent Plugin packaging and its installable skill surface.
+- `routes.json`: provider-route metadata, approval and boundary declarations checked by the offline packaging tests.
 - [Schemas](references/contact-brief.schema.json), [Exa plugin handoff](references/exa-plugin-result.md), [Fiber Agent handoff](references/fiber-agent-result.schema.json), [Jobsss handoff](references/jobsss.md), [verification](VERIFICATION.md).
 
-Not implemented: autonomous browser orchestration, direct MCP invocation from Python, automatic conversion of raw tool output without a host-normalized handoff, or Jobsss import. These remain agent/manual boundaries. The real optional AfterShip library was exercised on invalid syntax with no DNS, and DNS/SMTP outcomes were tested with mocks. No paid calls, external mailbox probes, native session tests, real contact mutation, sending, cron or profile installation were performed. Jobsss integration is documentation against inspected MCP source, not an exercised integration.
+Not implemented: autonomous browser orchestration, direct MCP invocation from Python, automatic conversion of raw tool output without a host-normalized handoff, or Jobsss import. A bundled MCP server is also deliberately absent: the package registers a skill surface only, and the compiler is invoked through the host terminal. These remain agent/manual boundaries. The real optional AfterShip library was exercised on invalid syntax with no DNS, and DNS/SMTP outcomes were tested with mocks. No paid calls, external mailbox probes, native session tests, real contact mutation, sending, cron or profile installation were performed. Jobsss integration is documentation against inspected MCP source, not an exercised integration.

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Hermes Agent Plugin packaging
+
+- Added a portable Agent Plugins v1 `plugin.json` so the repository root installs and is discovered through the host's own plugin command.
+- Added the installable skill surface `skills/contact-brief/SKILL.md`: byte-identical body to `SKILL.md`, frontmatter flattened into the string-only `metadata` map v1 requires, with an offline test enforcing that the two cannot drift.
+- Added `routes.json` (`contact-brief-routes/v1`): machine-readable route metadata for `codex_exa_plugin`, `exa_agent_fiber`, `direct_exa_agent_api` and `aftership_mailbox_check` covering fixed inputs, single-subject limits, explicit approval, spend/attempt visibility, miss statuses, redaction and the capabilities the package never has.
+- Added offline packaging tests plus a host install smoke check that runs the real `hermes plugins validate`/`doctor` against the package in a throwaway HOME and HERMES_HOME, with a corrupted-package negative control.
+- No MCP server, browser, social, messaging or sending surface was added; the packaging layer contains no forked compiler logic.
+
 ### Fiber Agent handoff and batch boundary
 
 - Added the `fiber-agent-result.schema.json` and offline `import-fiber` boundary for host-normalized Exa Agent/Fiber results.

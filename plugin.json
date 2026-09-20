@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "contact-brief",
+  "version": "0.2.0",
+  "description": "Portable Agent Plugin for one named professional: compiles host-supplied research and at most one provider-reported email into a cited contact-brief.v1 brief and an unsent draft. Ships an offline compiler, provider-result importers and an installable skill. No browser automation, no sending, no submission, no people discovery, no credentials.",
+  "license": "MIT",
+  "keywords": [
+    "contacts",
+    "evidence",
+    "email-discovery",
+    "agent-skills",
+    "offline"
+  ]
+}

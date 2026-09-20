@@ -21,6 +21,8 @@ Fiber may return `provider_reported` with an address and no source URL. Empty `s
 
 When a fixed list is approved for enrichment, a separate host runner must own stable person IDs/order, bounded concurrency, an aggregate spend cap, resumable journaling and retry/cancellation policy. Do not put those controls, provider credentials or batch scheduling into this package, and do not treat the batch output as outreach-ready contactability.
 
+Machine-readable route metadata for every provider path in this file — fixed inputs, single-subject limits, approval requirements, spend/attempt visibility, miss statuses, redaction and the capabilities this package never has — is declared in [routes.json](../routes.json) and checked by the offline packaging tests. This document remains the readable rationale; `routes.json` is the metadata a host adapter reads.
+
 ## Direct Exa Agent API fallback
 
 Implementation: `scripts/cb_providers.py:exa_run` and `exa_http`. Reviewed API material is retained under `evidence/exa-{overview,create,get}.md`; consult https://docs.exa.ai before authorizing real spend because provider prices/contracts can change.
