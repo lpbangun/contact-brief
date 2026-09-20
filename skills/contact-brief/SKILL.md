@@ -3,13 +3,12 @@ name: contact-brief
 description: Use when researching one named professional, importing a host-normalized provider result, or compiling cited contact evidence and an unsent draft.
 license: MIT
 metadata:
-  version: 0.2.0
-  author: Logani, Hermes Agent
-  platforms: [linux, macos, windows]
-  hermes:
-    tags: [research, contacts, evidence]
-    related_skills: []
+  version: "0.2.0"
+  author: "Logani, Hermes Agent"
+  platforms: "linux,macos,windows"
+  tags: "research,contacts,evidence"
 ---
+
 
 # Contact Brief
 
