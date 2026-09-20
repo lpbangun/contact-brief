@@ -54,7 +54,7 @@ The importer checks the exact name/company, permits zero or one address, require
 
 ## Fiber Agent handoff
 
-For the Exa Agent route with `data_sources: [{"provider":"fiber"}]`, the host must first normalize one result against [references/fiber-agent-result.schema.json](references/fiber-agent-result.schema.json). Preserve the exact subject, Fiber status, run ID, retrieval time, actual `usage` and `cost` objects when returned (including provider-specific fields such as `costDollars.dataSources`), the scalar total when available, attribution, and source URLs (which may legitimately be empty):
+For the Exa Agent route with `dataSources: [{"provider":"fiber"}]` (the real Exa Agent API field; the Python SDK's `data_sources` argument serializes to it), the host must first normalize one result against [references/fiber-agent-result.schema.json](references/fiber-agent-result.schema.json). Preserve the exact subject, Fiber status, run ID, retrieval time, actual `usage` and `cost` objects when returned (including provider-specific fields such as `costDollars.dataSources`), the scalar total when available, attribution, and source URLs (which may legitimately be empty):
 
 ```sh
 python3 scripts/contact_brief.py import-fiber request.json \
@@ -97,7 +97,7 @@ Use this only when no callable Codex Exa plugin is available, after preparing a 
 python3 scripts/live_test.py exa --authorization private/authorization.json --journal private/exa-run.json --execute
 ```
 
-The bundled direct Agent API subcommand is a legacy, single-person fallback with its own low-effort allowance and journal rules. Those local estimates are not universal Fiber pricing or a provider-enforced cap. It does not research profiles/posts or verify mailboxes. No automatic higher-effort retry; reuse the same journal to prevent duplicate dispatch. Skip Exa when an address is already sourced. It is not the end-to-end workflow, and its budget/journal rules do not apply to a host-owned Fiber bridge. No example authorization grants permission. See [providers](references/providers.md) for input shape, guardrails and limitations.
+The bundled direct Agent API subcommand is a legacy, single-person fallback with its own low-effort allowance and journal rules. Its `POST /agent/runs` body attaches the required Exa Connect Fiber datasource (`dataSources: [{"provider": "fiber"}]`) alongside the email-only query, one input data row and the email/attribution/source-URL output schema. Those local estimates are not universal Fiber pricing or a provider-enforced cap. It does not research profiles/posts or verify mailboxes. No automatic higher-effort retry; reuse the same journal to prevent duplicate dispatch. Skip Exa when an address is already sourced. It is not the end-to-end workflow, and its budget/journal rules do not apply to a host-owned Fiber bridge. No example authorization grants permission. See [providers](references/providers.md) for input shape, guardrails and limitations.
 
 ## Optional real AfterShip adapter
 

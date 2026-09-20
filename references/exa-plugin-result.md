@@ -58,7 +58,7 @@ The request and envelope names/company must match exactly. The importer accepts 
 
 ## Fiber Agent handoff
 
-The Exa Agent route using `data_sources: [{"provider":"fiber"}]` has a separate normalized envelope and importer. Use [fiber-agent-result.schema.json](fiber-agent-result.schema.json) and preserve the returned `usage` and `cost` objects (including provider-specific breakdowns) alongside any scalar total:
+The Exa Agent route using `dataSources: [{"provider":"fiber"}]` has a separate normalized envelope and importer. Use [fiber-agent-result.schema.json](fiber-agent-result.schema.json) and preserve the returned `usage` and `cost` objects (including provider-specific breakdowns) alongside any scalar total:
 
 ```sh
 python3 scripts/contact_brief.py import-fiber request.json \

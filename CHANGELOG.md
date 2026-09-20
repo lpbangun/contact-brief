@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Required Fiber datasource in the direct Agent API request
+
+- Fixed `scripts/cb_providers.py:exa_run` to attach the required Exa Connect Fiber datasource: the `POST /agent/runs` body now carries `dataSources: [{"provider": "fiber"}]` next to the unchanged email-only query, single input data row, `effort: low` and email/attribution/source-URL output schema.
+- The datasource is part of the journaled request fingerprint, so replaying with the SAME journal still resumes the recorded run instead of dispatching a second paid POST, while a journal written for a different request (including one predating this fix) is refused before any transport call.
+- Added deterministic tests pinning the exact request body and the resume/refuse behavior; docs and `routes.json` now name `dataSources` (the real Exa Agent API field) instead of `data_sources`.
+- No live lookup, credential change or provider call was performed by this change.
+
 ### Hermes Agent Plugin packaging
 
 - Added a portable Agent Plugins v1 `plugin.json` so the repository root installs and is discovered through the host's own plugin command.
