@@ -129,7 +129,7 @@
       "kind": "email_discovery",
       "owner": "host",
       "briefLookupProvider": "exa_agent_fiber",
-      "purpose": "one email-only Exa Agent run with data_sources [{provider: fiber}] for an already identity-resolved person",
+      "purpose": "one email-only Exa Agent run with dataSources [{\"provider\": \"fiber\"}] for an already identity-resolved person",
       "inputs": [
         "subject.name (exact)",
         "subject.company (exact)",
@@ -195,6 +195,7 @@
       "owner": "package",
       "briefLookupProvider": "exa_agent_fiber",
       "purpose": "legacy single-person fallback used only when no callable host Exa tool exists, after explicit authorization",
+      "request": "POST /agent/runs whose body carries query, one input data row for the approved person, dataSources [{\"provider\": \"fiber\"}], effort low and the email-only outputSchema; then bounded GET /agent/runs/{id} polling. The body is journaled verbatim and reused as the resume fingerprint.",
       "inputs": [
         "approved.name (exact)",
         "approved.company (exact)",

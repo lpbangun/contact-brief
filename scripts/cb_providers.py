@@ -38,6 +38,11 @@ def exa_run(auth, journal, *, key=None, transport=exa_http, polls=12, interval=5
                        'Cite email attribution sources. Return null if uncertain. No social discovery, activity research, '
                        'dossiers, phone numbers, mailbox verification or unrelated enrichment.',
                'input': {'data': [{'name': auth['name'], 'company': auth['company']}]},
+               # Exa Connect partner selection is the `dataSources` array (Exa Agent API);
+               # the Fiber datasource is required for this route, so it is part of the
+               # journaled request fingerprint: a journal written without it is refused,
+               # never resumed into a silently different run.
+               'dataSources': [{'provider': 'fiber'}],
                'effort': 'low',
                'outputSchema': {'type': 'object', 'properties': {
                    'email': {'type': 'string', 'format': 'email'},
