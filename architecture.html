@@ -1,1 +1,87 @@
-<!doctype html><html><head><meta charset="utf-8"><style>svg{width:100%;max-width:760px;height:auto;color:var(--foreground);font-family:inherit}rect{fill:var(--card);stroke:var(--border);stroke-width:1.5}text{fill:currentColor;font-size:14px;text-anchor:middle}.small{font-size:11px;fill:var(--muted-foreground)}.core{stroke:var(--accent)}path{fill:none;stroke:var(--muted-foreground);stroke-width:1.5}h3{margin:0 0 6px}p{color:var(--muted-foreground);font-size:12px}</style></head><body><h3>Contact Brief · proposed architecture</h3><svg viewBox="0 0 760 570" role="img" aria-label="Standalone or Jobsss entry into one skill, using Exa, LinkedIn and X, then evidence and email checks, producing a brief and optional Jobsss handoff"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10" style="fill:var(--muted-foreground)"/></marker></defs><g marker-end="url(#a)"><path d="M380 60V90"/><path d="M380 150V180H125V205"/><path d="M380 150V205"/><path d="M380 150V180H635V205"/><path d="M125 275V305H380V335"/><path d="M380 275V335"/><path d="M635 275V305H380V335"/><path d="M380 405V440"/><path d="M500 475H540"/></g><rect x="205" y="5" width="350" height="55" rx="8"/><text x="380" y="28">Standalone request / Jobsss delegation</text><text x="380" y="47" class="small">Name + company + optional networking purpose</text><rect class="core" x="205" y="90" width="350" height="60" rx="8"/><text x="380" y="115">One contact-brief skill</text><text x="380" y="135" class="small">Preflight · bounded research · identity resolution</text><rect x="15" y="205" width="220" height="70" rx="8"/><text x="125" y="231">Exa</text><text x="125" y="253" class="small">Identity + email enrichment</text><rect x="270" y="205" width="220" height="70" rx="8"/><text x="380" y="231">LinkedIn · own session</text><text x="380" y="253" class="small">Native search → profile → activity</text><rect x="525" y="205" width="220" height="70" rx="8"/><text x="635" y="231">X · own session</text><text x="635" y="253" class="small">Native search → profile → posts</text><rect class="core" x="145" y="335" width="470" height="70" rx="8"/><text x="380" y="360">Evidence normalization + AfterShip email checks</text><text x="380" y="382" class="small">Identity ≠ mailbox acceptance · citations · dates · unknowns</text><rect x="175" y="440" width="325" height="70" rx="8"/><text x="337" y="465">Contact brief + optional draft</text><text x="337" y="487" class="small">Markdown + JSON · no separate database</text><rect x="540" y="440" width="200" height="70" rx="8"/><text x="640" y="465">Optional Jobsss MCP</text><text x="640" y="487" class="small">Existing records / drafts</text><text x="380" y="550" class="small">LIVE TEST GATE: native search + source inspection on BOTH LinkedIn and X</text></svg><p>Proposal only · host-managed credentials · read-only social access · no sending · no cron</p></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact Brief architecture</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { color: var(--foreground); font-family: inherit; font-size: 14px; line-height: 1.45; margin: 20px; }
+  h2 { font-size: 18px; margin: 0 0 6px; }
+  h3 { font-size: 14px; margin: 0 0 4px; }
+  p { color: var(--muted-foreground); margin: 4px 0 0; }
+  .lead { margin-bottom: 16px; }
+  .section { margin: 18px 0; }
+  .grid { display: grid; gap: 12px; }
+  .three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; min-height: 76px; }
+  .core { border-color: var(--accent); }
+  .step { color: var(--muted-foreground); font-size: 11px; margin-bottom: 5px; }
+  .arrow { align-self: center; color: var(--muted-foreground); font-size: 20px; text-align: center; }
+  .flow { display: grid; grid-template-columns: 1fr 28px 1fr 28px 1fr; gap: 8px; align-items: stretch; }
+  .note { border-left: 3px solid var(--accent); padding: 8px 12px; color: var(--muted-foreground); }
+  @media (max-width: 700px) {
+    .three, .two { grid-template-columns: 1fr; }
+    .flow { grid-template-columns: 1fr; }
+    .arrow { transform: rotate(90deg); }
+  }
+</style>
+</head>
+<body>
+<h2>Contact Brief &middot; execution boundaries</h2>
+<p class="lead">One person at a time. The package compiles evidence supplied by the host; it does not browse, discover people or send messages.</p>
+
+<section class="section" aria-labelledby="optional-title">
+<h3 id="optional-title">Optional host research</h3>
+<div class="grid three">
+  <article class="card">
+    <h3>Native LinkedIn and X</h3>
+    <p>The host resolves identity and inspects profiles and authored activity. A name match alone is insufficient.</p>
+  </article>
+  <article class="card">
+    <h3>Optional email lookup</h3>
+    <p>Codex Exa plugin or an authorized Fiber/direct API route may return at most one provider-reported address. Exa is not used for identity or social research.</p>
+  </article>
+  <article class="card">
+    <h3>Optional mailbox check</h3>
+    <p>AfterShip runs only with exact-address authorization. Its result is separate from email attribution and identity.</p>
+  </article>
+</div>
+<p class="note">These are host capabilities, not part of the offline compiler. Provider calls, browser work and mailbox checks are not implied by a successful build.</p>
+</section>
+
+<section class="section" aria-label="Core offline flow">
+<div class="flow">
+  <article class="card">
+    <div class="step">1 &middot; Set up</div>
+    <h3>Resolve the tool path</h3>
+    <p>Find scripts/contact_brief.py beside the skill, or two levels above it in the portable package. Put the virtual environment and run files in a writable directory outside the package.</p>
+  </article>
+  <div class="arrow" aria-hidden="true">&rarr;</div>
+  <article class="card core">
+    <div class="step">2 &middot; Compile and validate</div>
+    <h3>Offline Python compiler</h3>
+    <p>Consumes a request and supplied evidence; checks schema and semantic invariants; never contacts a provider.</p>
+  </article>
+  <div class="arrow" aria-hidden="true">&rarr;</div>
+  <article class="card">
+    <div class="step">3 &middot; Review</div>
+    <h3>Brief and optional draft</h3>
+    <p>Writes cited Markdown and contact-brief.v1 JSON to the chosen run directory. Any draft is unsent.</p>
+  </article>
+</div>
+</section>
+
+<section class="section grid two" aria-label="Optional JobSSS handoff">
+  <article class="card">
+    <h3>Optional JobSSS handoff</h3>
+    <p>With approval, import the JSON brief into a profile. JobSSS reads it natively, can reconcile safe repeats, and keeps imported contacts unapproved.</p>
+  </article>
+  <article class="card">
+    <h3>Authority boundary</h3>
+    <p>Read back exact persisted records. JobSSS owns its state; Contact Brief grants no approval and neither package sends outreach.</p>
+  </article>
+</section>
+</body>
+</html>
