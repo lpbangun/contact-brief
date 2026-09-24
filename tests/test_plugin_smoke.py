@@ -1,10 +1,10 @@
 """Host-level install smoke check for the Agent Plugin package.
 
-Runs the real `hermes plugins validate` and `hermes plugins doctor` against this
-package inside a throwaway HOME plus HERMES_HOME, so nothing in the operator's
-profile is read or written. Every command here is local: no network call, no
-provider credential and no live contact action is performed. When the hermes CLI
-is not installed the module skips with that reason instead of pretending to pass.
+Runs Hermes validate, doctor, enable and list against a copied package in
+throwaway HOME and HERMES_HOME directories. It makes no network or provider
+calls and does not touch the operator profile. This checks package admission
+and saved enablement, not skill injection into a live model prompt. When Hermes
+CLI is absent, the module skips with that reason.
 """
 import json
 import os
@@ -53,8 +53,11 @@ class HermesPluginInstallSmokeTests(unittest.TestCase):
 
     @staticmethod
     def json_report(output):
-        start = output.index('{')
-        return json.loads(output[start:])
+        starts = [index for token in ('{', '[')
+                  if (index := output.find(token)) >= 0]
+        start = min(starts)
+        value, _ = json.JSONDecoder().raw_decode(output[start:])
+        return value
 
     def test_package_is_admissible_and_registers_in_an_isolated_host(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -71,6 +74,18 @@ class HermesPluginInstallSmokeTests(unittest.TestCase):
             self.assertEqual(doctor.returncode, 0, doctor.stdout + doctor.stderr)
             self.assertIn(DOCTOR_OK, doctor.stdout)
             self.assertIn('manifest: contact-brief', doctor.stdout)
+
+            enable = self.run_hermes(home, hermes_home, 'plugins', 'enable',
+                                     'contact-brief', '--no-allow-tool-override')
+            self.assertEqual(enable.returncode, 0, enable.stdout + enable.stderr)
+            self.assertIn('Plugin contact-brief enabled', enable.stdout)
+            listed = self.run_hermes(home, hermes_home, 'plugins', 'list', '--json')
+            self.assertEqual(listed.returncode, 0, listed.stdout + listed.stderr)
+            plugins = self.json_report(listed.stdout)
+            contact_brief = next(item for item in plugins if item['name'] == 'contact-brief')
+            self.assertEqual(contact_brief['status'], 'enabled')
+            self.assertEqual(contact_brief['source'], 'user')
+            self.assertTrue((plugin / 'skills' / 'contact-brief' / 'SKILL.md').is_file())
 
     def test_isolated_run_does_not_write_the_operators_profile(self):
         real_home = Path(os.environ.get('HERMES_HOME') or Path.home() / '.hermes')
