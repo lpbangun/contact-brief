@@ -17,7 +17,6 @@ class LiveHarnessTests(unittest.TestCase):
         report=json.loads(run.stdout)
         self.assertFalse(report['passed'])
         self.assertIn('named contact and explicit approval',report['blockers'])
-        self.assertIn('EXA_API_KEY missing',report['blockers'])
         import live_test
         import contact_brief as cb
         from test_gates import request
@@ -26,7 +25,7 @@ class LiveHarnessTests(unittest.TestCase):
             gate=live_test.verify_evidence(brief,Path(tmp),None)
             self.assertFalse(gate['passed'])
             self.assertTrue(any('evidence file' in b for b in gate['blockers']))
-            self.assertTrue(any('Exa' in b for b in gate['blockers']))
+            self.assertTrue(any('Provider lookup' in b for b in gate['blockers']))
 
     def test_supplied_complete_fixtures_never_attest_live_execution(self):
         import live_test
@@ -37,8 +36,8 @@ class LiveHarnessTests(unittest.TestCase):
         data['signals'] = [{**SOURCE, 'platform': 'x', 'authored': True,
                             'summary': 'Fictional post', 'relevance': 'Fixture only'}]
         brief = cb.build(data)
-        journal = {'request': {'input': {'data': [brief['subject']]}},
-                   'run': {'status': 'completed', 'output': {'grounding': [{'url': SOURCE['url']}]}}}
+        journal = {'request': {'full_name': brief['subject']['name']},
+                   'call_id': 'fixture-call'}
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp)/'fixture-only.txt').write_text('Supplied fixture, NOT browser execution')
             report = live_test.verify_evidence(brief, tmp, journal)

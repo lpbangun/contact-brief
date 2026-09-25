@@ -194,7 +194,7 @@ class RouteMetadataTests(unittest.TestCase):
         self.assertEqual(self.routes['$schema'], 'contact-brief-routes/v1')
         self.assertEqual(self.routes['plugin'], json.loads((ROOT / 'plugin.json').read_text())['name'])
         self.assertEqual(set(self.routes['routes']), {
-            'codex_exa_plugin', 'exa_agent_fiber', 'direct_exa_agent_api', 'aftership_mailbox_check'})
+            'codex_exa_plugin', 'exa_agent_fiber', 'aftership_mailbox_check'})
         for key, route in self.routes['routes'].items():
             self.assertEqual(route['id'], key)
             missing = [field for field in ROUTE_REQUIRED if field not in route]
@@ -281,7 +281,7 @@ class BoundaryTests(unittest.TestCase):
             self.assertIs(capabilities['packageNetwork'], route['owner'] == 'package', key)
 
     def test_paid_routes_require_explicit_approval(self):
-        for key in ('exa_agent_fiber', 'direct_exa_agent_api', 'aftership_mailbox_check'):
+        for key in ('exa_agent_fiber', 'aftership_mailbox_check'):
             approval = self.routes['routes'][key]['approval']
             self.assertIs(approval['required'], True, key)
             self.assertTrue(approval['kind'].strip(), key)
